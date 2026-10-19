@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Danio pegRNA Designer — prime editing guide design for zebrafish</title>
+<meta name="description" content="Design prime editing guide RNAs for zebrafish. Sweeps PBS and RTT lengths, picks the Tm-matched PBS for 28.5 °C embryos, reports PBS–spacer auto-inhibition, finds PE3 and PE3b nicking guides, and looks up GRCz11 coordinates.">
+<meta name="author" content="Gaurav K. Varshney">
+<link rel="canonical" href="https://thevarshneylab.github.io/pegrna-designer/">
+<meta property="og:title" content="Danio pegRNA Designer">
+<meta property="og:description" content="Prime editing guide RNA design for zebrafish, with Tm-matched PBS and GRCz11 lookup.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>&#129516;</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: single column — target panel, parameters, ranked protospacers, design bench */
+:root{
+  --bg:#f5f4f0;
+  --panel:#ffffff;
+  --ink:#1c1e22;
+  --muted:#60656e;
+  --line:#ddd9d1;
+  --accent:#0f6f68;        /* spacers, primary actions */
+  --target:#c2521a;        /* the edit, the nick */
+  --bystander:#8a6d1f;     /* warnings */
+  --rtt:#0f6f68;           /* RT template */
+  --pbs:#2a6ca8;           /* primer binding site */
+  --pam:#7a4fa8;
+  --wash:#eef1ef;
+  --good:#1a7f5a;
+  --bad:#b03434;
+  --font-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171a; --panel:#1d2024; --ink:#e9e7e2; --muted:#9aa1ab; --line:#32363c;
+    --accent:#58c8bd; --target:#f08a52; --bystander:#d6b85a;
+    --rtt:#58c8bd; --pbs:#6fb2e8; --pam:#bb95e6; --wash:#24282d;
+    --good:#45c79a; --bad:#ef7676; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171a; --panel:#1d2024; --ink:#e9e7e2; --muted:#9aa1ab; --line:#32363c;
+  --accent:#58c8bd; --target:#f08a52; --bystander:#d6b85a;
+  --rtt:#58c8bd; --pbs:#6fb2e8; --pam:#bb95e6; --wash:#24282d;
+  --good:#45c79a; --bad:#ef7676; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+img{max-width:100%}
+[hidden]{display:none !important}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--font-ui);
+  font-size:15px; line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:28px 56px;
+}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+h1{font-size:clamp(24px,4vw,32px);font-weight:600;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:6px 0 0;max-width:62ch}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0}
+.masthead{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.masthead .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+.panel>h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 14px}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1 1 110px}
+label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+textarea,select,input[type=text],input[type=number]{
+  font-family:var(--font-mono);font-size:13px;color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:7px;padding:9px 10px;width:100%;
+}
+textarea{min-height:104px;resize:vertical;line-height:1.6;letter-spacing:.04em}
+select{font-family:var(--font-ui)}
+button{
+  font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;
+  background:var(--accent);color:var(--panel);border:none;border-radius:7px;padding:9px 14px;
+}
+button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+button.ghost:hover{background:var(--wash)}
+button[disabled]{opacity:.55;cursor:default}
+button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+a.btnlink{text-decoration:none;font-size:13px;font-weight:600;border:1px solid var(--accent);border-radius:7px;padding:8px 13px}
+.hint{font-size:12.5px;color:var(--muted)}
+.hint code{font-family:var(--font-mono);background:var(--wash);padding:1px 4px;border-radius:3px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;
+  padding:8px 12px;color:var(--muted);white-space:nowrap;font-weight:600}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.fieldset{border-top:1px solid var(--line);margin-top:16px;padding-top:14px}
+.fieldset>.ft{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted);margin-bottom:7px;font-weight:400}
+.chk input{margin-top:3px;width:auto;flex:none}
+.urlbox{font-family:var(--font-mono);font-size:11.5px;word-break:break-all;background:var(--bg);
+  border:1px solid var(--line);border-radius:7px;padding:9px 10px;line-height:1.55;color:var(--muted)}
+.urlbox b{color:var(--ink);font-weight:500}
+
+/* candidates */
+.cands{display:flex;flex-direction:column;gap:9px}
+.cand{display:block;width:100%;text-align:left;background:var(--panel);color:inherit;
+  border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:11px 13px;font-weight:400}
+.cand:hover{border-color:var(--accent)}
+.cand[aria-current="true"]{border-color:var(--accent);border-left-color:var(--accent);background:var(--wash)}
+.cand .top{display:flex;align-items:baseline;gap:10px;justify-content:space-between}
+.cand .ps{font-family:var(--font-mono);font-size:13px;word-break:break-all}
+.cand .ps .pamx{color:var(--pam);font-weight:600}
+.cand .meta{display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:6px;font-family:var(--font-mono)}
+.score{font-family:var(--font-mono);font-weight:600;font-size:16px;font-variant-numeric:tabular-nums;flex:none;color:var(--accent)}
+.strandtag{font-family:var(--font-mono);font-size:10.5px;border:1px solid var(--line);border-radius:3px;padding:0 5px}
+
+/* sequence track */
+.track{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:13px 13px 9px}
+.track pre{margin:0;font-family:var(--font-mono);font-size:12.5px;line-height:1.4;white-space:pre}
+.t-spacer{color:var(--accent);font-weight:600}
+.t-pam{color:var(--pam);font-weight:600}
+.t-edit{background:var(--target);color:#fff;font-weight:600;border-radius:2px}
+.t-rtt{border-bottom:2px solid var(--rtt)}
+.t-pbs{border-bottom:2px solid var(--pbs)}
+.t-dim{color:var(--muted)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:11px}
+.k-spacer{color:var(--accent)}.k-pam{color:var(--pam)}.k-rtt{color:var(--rtt)}.k-pbs{color:var(--pbs)}.k-edit{color:var(--target)}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:14px}
+.stat{background:var(--panel);padding:9px 11px}
+.stat .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:var(--font-mono);font-size:16px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px}
+
+/* matrix */
+.matrix-wrap{overflow-x:auto}
+table.mx{border-collapse:separate;border-spacing:2px;font-family:var(--font-mono);font-size:11px;font-variant-numeric:tabular-nums}
+table.mx th{font-weight:500;color:var(--muted);padding:2px 6px;font-size:10.5px;white-space:nowrap}
+table.mx td button{width:100%;min-width:36px;padding:6px 2px;border-radius:4px;border:1px solid transparent;
+  font-family:var(--font-mono);font-size:11px;font-weight:500;background:var(--wash);color:var(--ink)}
+table.mx td button[aria-current="true"]{outline:2px solid var(--ink);outline-offset:1px}
+table.mx td button.na{background:var(--bg);color:var(--muted);cursor:default}
+
+/* sequences */
+.seqrow{border-top:1px solid var(--line);padding:11px 0}
+.seqrow:first-child{border-top:0}
+.seqrow .lbl{display:flex;align-items:center;gap:9px;margin-bottom:5px;flex-wrap:wrap}
+.seqrow .lbl h3{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin:0;color:var(--muted)}
+.seqrow .lbl .len{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.seqrow .lbl .sp{margin-left:auto}
+.seq{font-family:var(--font-mono);font-size:13px;word-break:break-all;line-height:1.65;background:var(--bg);
+  border:1px solid var(--line);border-radius:7px;padding:9px 10px}
+.seq .s-spacer{color:var(--accent)}.seq .s-scaf{color:var(--muted)}
+.seq .s-rtt{color:var(--rtt);font-weight:500}.seq .s-pbs{color:var(--pbs);font-weight:500}
+.seq .s-motif{color:var(--pam)}.seq .s-term{color:var(--muted)}
+button.tiny{font-size:11.5px;padding:4px 9px;background:transparent;color:var(--accent);border:1px solid var(--line)}
+button.tiny:hover{border-color:var(--accent)}
+
+/* flags */
+.flags{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.flag{font-size:12.5px;padding:7px 10px;border-radius:6px;border-left:3px solid;background:var(--wash)}
+.flag.warn{border-color:var(--bystander)}
+.flag.bad{border-color:var(--bad)}
+.flag.note{border-color:var(--line);color:var(--muted)}
+.flag.good{border-color:var(--good)}
+
+table.data{width:100%;border-collapse:collapse;font-size:12.5px}
+table.data th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  font-weight:600;padding:6px 10px 6px 0;border-bottom:1px solid var(--line)}
+table.data td{padding:7px 10px 7px 0;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:12px}
+table.data td.sp{word-break:break-all}
+.tag{font-family:var(--font-mono);font-size:10.5px;padding:1px 6px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.tag.pe3b{border-color:var(--good);color:var(--good)}
+.tag.pref{border-color:var(--accent);color:var(--accent)}
+
+.empty{padding:34px 18px;text-align:center;color:var(--muted);font-size:13.5px}
+details summary{cursor:pointer;font-weight:600;font-size:14px}
+.note-list{margin:12px 0 0;padding-left:18px;color:var(--muted);font-size:13.5px}
+.note-list li{margin-bottom:9px}
+.note-list b{color:var(--ink);font-weight:600}
+footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:20px}
+footer p{margin:0 0 10px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(18px + env(safe-area-inset-bottom,0px));
+  background:var(--ink);color:var(--bg);padding:8px 15px;border-radius:99px;font-size:12.5px;z-index:50;
+  opacity:0;transition:opacity .18s;pointer-events:none}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div>
+    <p class="eyebrow">Varshney Lab · Oklahoma Medical Research Foundation</p>
+    <h1>Danio pegRNA Designer</h1>
+    <p class="sub">Prime editing guide design for zebrafish. Mark the edit in your sequence, and the tool returns every protospacer that can reach it — with a PBS × RTT sweep, the Tm-matched PBS for embryos at 28.5 °C, and PE3 and PE3b nicking guides.</p>
+  </div>
+  <div class="right">
+    <button class="tiny" id="themeBtn" title="Switch between light and dark">◐</button>
+    <a class="btnlink" href="https://github.com/thevarshneylab/thevarshneylab.github.io/tree/main/pegrna-designer">Source ↗</a>
+  </div>
+</header>
+
+<section class="panel">
+  <div class="tabs" role="tablist" id="inputTabs">
+    <button role="tab" data-mode="seq" aria-selected="true">Paste sequence</button>
+    <button role="tab" data-mode="coord" aria-selected="false">GRCz11 coordinates</button>
+  </div>
+
+  <div id="pane-seq">
+    <div class="field">
+      <label for="seq">Target sequence, with the edit in brackets</label>
+      <textarea id="seq" spellcheck="false" placeholder="…150 nt upstream…[C/T]…150 nt downstream…"></textarea>
+    </div>
+    <p class="hint" style="margin:8px 0 0"><code>[C/T]</code> substitution · <code>[-/CTT]</code> insertion · <code>[AGG/-]</code> deletion. Give at least 100 nt on each side so nicking guides can be found.</p>
+    <div id="locusTag"></div>
+    <div class="row" style="margin-top:14px">
+      <button id="run">Design pegRNAs</button>
+      <button class="ghost" id="loadEx">Load example</button>
+    </div>
+  </div>
+
+  <div id="pane-coord" hidden>
+    <div class="row">
+      <div class="field" style="flex:1 1 90px"><label for="chrom">Chromosome</label><input type="text" id="chrom" value="7" spellcheck="false"></div>
+      <div class="field" style="flex:2 1 130px"><label for="pos">Position (1-based)</label><input type="text" id="pos" value="12345678" spellcheck="false" inputmode="numeric"></div>
+      <div class="field"><label for="refA">Ref</label><input type="text" id="refA" value="A" spellcheck="false"></div>
+      <div class="field"><label for="altA">Alt</label><input type="text" id="altA" value="G" spellcheck="false"></div>
+      <div class="field"><label for="flank">Flank</label><input type="number" id="flank" value="150" min="60" max="500"></div>
+    </div>
+    <p class="hint" style="margin:10px 0 0">Use <code>-</code> for an empty allele: <code>-</code> → <code>CTT</code> inserts after the position, <code>AGG</code> → <code>-</code> deletes from it. Alleles are read on the forward strand.</p>
+
+    <div class="fieldset">
+      <div class="ft">Fetch the window</div>
+      <div class="urlbox" id="urlbox"></div>
+      <div class="row" style="margin-top:10px">
+        <button id="fetchSeq">Fetch from Ensembl</button>
+        <button class="ghost tiny" id="copyUrl">Copy URL</button>
+        <a class="btnlink" id="openUrl" href="#" target="_blank" rel="noopener" style="padding:7px 12px;font-size:12px">Open ↗</a>
+      </div>
+      <div id="fetchMsg"></div>
+      <p class="hint" style="margin:10px 0 0">Sequence comes straight from the Ensembl REST API on GRCz11. If it is unreachable, open the link and paste the response below.</p>
+    </div>
+
+    <div class="fieldset">
+      <div class="ft">Or paste it yourself</div>
+      <div class="field">
+        <label for="fasta">FASTA or raw sequence</label>
+        <textarea id="fasta" spellcheck="false" style="min-height:92px" placeholder="&gt;chromosome:GRCz11:7:12345528:12345828:1&#10;ATATTGATTTCATTCCGACT…"></textarea>
+      </div>
+      <div class="row" style="margin-top:12px"><button id="buildTarget">Build target and design</button></div>
+      <div id="coordMsg"></div>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Parameters</h2>
+  <div class="row">
+    <div class="field"><label for="pbsMin">PBS min</label><input type="number" id="pbsMin" value="6" min="4" max="20"></div>
+    <div class="field"><label for="pbsMax">PBS max</label><input type="number" id="pbsMax" value="16" min="4" max="20"></div>
+    <div class="field"><label for="rttMin">RTT min</label><input type="number" id="rttMin" value="10" min="5" max="80"></div>
+    <div class="field"><label for="rttMax">RTT max</label><input type="number" id="rttMax" value="34" min="5" max="80"></div>
+  </div>
+  <p class="hint" style="margin:9px 0 0">The PBS range starts at 6 nt because Tm-matched zebrafish pegRNAs land far shorter than the classic 13 nt.</p>
+
+  <div class="fieldset">
+    <div class="ft">Constraints</div>
+    <div class="row">
+      <div class="field"><label for="pam">PAM</label>
+        <select id="pam">
+          <option value="NGG">NGG — SpCas9</option>
+          <option value="NG">NG — SpG</option>
+          <option value="NRN">NRN — SpRY</option>
+          <option value="NYN">NYN — SpRY</option>
+        </select>
+      </div>
+      <div class="field"><label for="maxN2E">Max nick→edit</label><input type="number" id="maxN2E" value="30" min="0" max="60"></div>
+      <div class="field"><label for="minHom">Min 3′ homology</label><input type="number" id="minHom" value="7" min="0" max="40"></div>
+      <div class="field"><label for="tgtTm">Target PBS Tm °C</label><input type="number" id="tgtTm" value="28.5" step="0.5" min="15" max="60"></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="ghost tiny" data-tm="28.5">28.5 °C — embryos</button>
+      <button class="ghost tiny" data-tm="37">37 °C — cell culture</button>
+    </div>
+    <div class="field" style="margin-top:12px">
+      <label for="tmModel">PBS Tm model</label>
+      <select id="tmModel">
+        <option value="hybrid">PBS:target RNA–DNA hybrid (Tm-matched design)</option>
+        <option value="dna">DNA–DNA approximation (SantaLucia)</option>
+      </select>
+    </div>
+    <p class="hint" style="margin:9px 0 0">Tm-matched design picks the PBS whose hybrid with the nicked target melts near the incubation temperature instead of a fixed length. Ponnienselvan et al. used 6–7 nt in zebrafish embryos on this basis.</p>
+  </div>
+
+  <div class="fieldset">
+    <div class="ft">pegRNA assembly</div>
+    <div class="field"><label for="scaffold">Scaffold</label>
+      <select id="scaffold">
+        <option value="std">Standard sgRNA (76 nt)</option>
+        <option value="fe">Flip + extension (F+E)</option>
+      </select>
+    </div>
+    <label class="chk" style="margin-top:12px"><input type="checkbox" id="useMotif" checked> Append a 3′ motif (epegRNA)</label>
+    <input type="text" id="motif" value="CGCGGTTCTATCTAGTTACGCGTTAAACCAACTAGAA" spellcheck="false" style="font-size:11.5px">
+    <p class="hint" style="margin:8px 0 0">tevopreQ1 by default, and editable. Worth running a plain pegRNA alongside it — epegRNAs have not always outperformed in zebrafish.</p>
+    <label class="chk" style="margin-top:12px"><input type="checkbox" id="g5" checked> Add a 5′ G to the spacer when it lacks one (U6)</label>
+    <label class="chk"><input type="checkbox" id="term"> Append the U6 terminator (TTTTTTT)</label>
+  </div>
+</section>
+
+<section class="panel" id="candPanel" hidden>
+  <h2>Protospacers <span id="candCount" class="hint" style="font-weight:400;letter-spacing:0;text-transform:none"></span></h2>
+  <div class="cands" id="cands"></div>
+</section>
+
+<section class="panel" id="bench">
+  <h2>Design bench <span id="benchTag" class="hint" style="font-weight:400;letter-spacing:0;text-transform:none"></span></h2>
+  <div id="benchBody">
+    <div class="empty">Paste a target and press <b>Design pegRNAs</b>. Candidates appear above; pick one to open its PBS × RTT matrix here.</div>
+  </div>
+</section>
+
+<section class="panel">
+  <details>
+    <summary>How candidates are scored</summary>
+    <p class="hint" style="margin:10px 0 0">
+      The score is a triage heuristic, not a trained efficiency prediction. It rewards a short nick-to-edit distance, a PBS Tm close to the incubation temperature, at least 7 nt of homology 3′ of the edit, and an edit that lands in the PAM or seed so the corrected allele cannot be re-nicked. It penalises a 3′ extension beginning with C, poly-T runs that terminate Pol III early, and long PBS–spacer duplexes. For a trained prediction, run a shortlist through
+      <a href="https://pridict.it/" target="_blank" rel="noopener">PRIDICT</a> or
+      <a href="http://deepcrispr.info/DeepPrime/" target="_blank" rel="noopener">DeepPrime</a> — neither was trained on zebrafish embryos, so treat both as guidance.
+    </p>
+  </details>
+</section>
+
+<section class="panel">
+  <details>
+    <summary>Off-target checking</summary>
+    <p class="hint" style="margin:10px 0 0">
+      This page does not search the genome. Copy a spacer and run it through
+      <a href="https://crispor.gi.ucsc.edu/" target="_blank" rel="noopener">CRISPOR</a> or
+      <a href="http://www.rgenome.net/cas-offinder/" target="_blank" rel="noopener">Cas-OFFinder</a>
+      against <em>Danio rerio</em> GRCz11/danRer11. Prime editing produces fewer off-target events than nuclease editing, but the nicking sgRNA in a PE3 design deserves the same check as the pegRNA spacer.
+    </p>
+  </details>
+</section>
+
+<footer>
+  <p>Design rules are implemented from the papers below; the arithmetic is checked against published reference designs in <a href="https://github.com/thevarshneylab/thevarshneylab.github.io/blob/main/pegrna-designer/test.js">test.js</a>.</p>
+  <p id="citations"></p>
+  <p>Runs entirely in your browser. Nothing is uploaded except the Ensembl request you trigger yourself.</p>
+  <p>Open source · <a href="https://github.com/thevarshneylab/thevarshneylab.github.io/tree/main/pegrna-designer">source and issues on GitHub</a></p>
+  <p>This tool is developed using Claude Opus 5.</p>
+</footer>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="pegrna.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

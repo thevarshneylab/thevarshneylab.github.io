@@ -1,0 +1,83 @@
+cff-version: 1.2.0
+title: Danio pegRNA Designer
+message: >-
+  If you use this tool, please cite the publications the design rules are
+  taken from, listed under references below.
+type: software
+authors:
+  - family-names: Varshney
+    given-names: Gaurav K.
+    affiliation: Oklahoma Medical Research Foundation, Oklahoma City, OK, USA
+repository-code: "https://github.com/thevarshneylab/thevarshneylab.github.io/tree/main/pegrna-designer"
+url: "https://thevarshneylab.github.io/pegrna-designer/"
+abstract: >-
+  A browser-based prime editing guide RNA designer for zebrafish. Sweeps
+  primer binding site and reverse transcription template lengths, selects the
+  PBS whose hybrid with the nicked target melts near the incubation
+  temperature, reports the auto-inhibitory PBS-spacer duplex, finds PE3 and
+  PE3b nicking guides, and resolves GRCz11 coordinates through Ensembl.
+keywords:
+  - CRISPR
+  - prime editing
+  - zebrafish
+  - pegRNA design
+  - GRCz11
+license: MIT
+version: 0.1.0
+date-released: "2026-10-19"
+references:
+  - type: article
+    title: >-
+      Search-and-replace genome editing without double-strand breaks or donor
+      DNA
+    authors:
+      - family-names: Anzalone
+        given-names: Andrew V.
+      - family-names: Liu
+        given-names: David R.
+    journal: Nature
+    volume: 576
+    start: 149
+    year: 2019
+    doi: 10.1038/s41586-019-1711-4
+  - type: article
+    title: >-
+      Reducing the inherent auto-inhibitory interaction within the pegRNA
+      enhances prime editing efficiency
+    authors:
+      - family-names: Ponnienselvan
+        given-names: Karthikeyan
+      - family-names: Wolfe
+        given-names: Scot A.
+    journal: Nucleic Acids Research
+    volume: 51
+    start: 6966
+    year: 2023
+    doi: 10.1093/nar/gkad456
+  - type: article
+    title: >-
+      Engineered pegRNAs improve prime editing efficiency
+    authors:
+      - family-names: Nelson
+        given-names: James W.
+      - family-names: Liu
+        given-names: David R.
+    journal: Nature Biotechnology
+    volume: 40
+    start: 402
+    year: 2022
+    doi: 10.1038/s41587-021-01039-7
+  - type: article
+    title: >-
+      Improved nearest-neighbor parameters for the stability of RNA/DNA
+      hybrids under a physiological condition
+    authors:
+      - family-names: Banerjee
+        given-names: Dipanwita
+      - family-names: Sugimoto
+        given-names: Naoki
+    journal: Nucleic Acids Research
+    volume: 48
+    start: 12042
+    year: 2020
+    doi: 10.1093/nar/gkaa572
